@@ -1,5 +1,4 @@
 import pygame
-import time
 import random
  
 pygame.init()
@@ -25,13 +24,21 @@ player_stuck = False
 player_total = 0
 dealer_total = 0
 player_bust = False
+player_won = False
 dealer_bust = False
+dealer_won = False
+player_score = 0
+dealer_score = 0
+player_stake = 5
+player_funds = 100
+draw = False
+hand_over = False
+first_hand = True
 
 gameDisplay = pygame.display.set_mode((display_width,display_height))
 pygame.display.set_caption('Pontoon by Andy G')
-clock = pygame.time.Clock()
 
-deck=[(1,'images/ace_of_clubs.png'), (1,'images/ace_of_hearts.png'), (1,'images/ace_of_spades.png'), (1,'images/ace_of_diamonds.png'),
+deck=[(11,'images/ace_of_clubs.png'), (11,'images/ace_of_hearts.png'), (11,'images/ace_of_spades.png'), (11,'images/ace_of_diamonds.png'),
       (2,'images/2_of_clubs.png'), (2,'images/2_of_hearts.png'), (2,'images/2_of_spades.png'), (2,'images/2_of_diamonds.png'),
       (3,'images/3_of_clubs.png'), (3,'images/3_of_hearts.png'), (3,'images/3_of_spades.png'), (3,'images/3_of_diamonds.png'),
 	  (4,'images/4_of_clubs.png'), (4,'images/4_of_hearts.png'), (4,'images/4_of_spades.png'), (4,'images/4_of_diamonds.png'),
@@ -45,150 +52,215 @@ deck=[(1,'images/ace_of_clubs.png'), (1,'images/ace_of_hearts.png'), (1,'images/
       (10,'images/queen_of_clubs.png'), (10,'images/queen_of_hearts.png'), (10,'images/queen_of_spades.png'), (10,'images/queen_of_diamonds.png'),
       (10,'images/king_of_clubs.png'), (10,'images/king_of_hearts.png'), (10,'images/king_of_spades.png'), (10,'images/king_of_diamonds.png')]
 
+#create a shoe with 4 decks
 current_deck = deck.copy()
+current_deck.extend(current_deck)
+current_deck.extend(current_deck)
+
+def reset_game():
+    global hand
+    global dealer
+
+    global in_game
+    global player_stuck
+    global player_total
+    global dealer_total
+    global player_bust
+    global player_won
+    global dealer_bust
+    global dealer_won
+    global player_score
+    global dealer_score
+    global player_stake
+    global draw
+    global hand_over
+    global first_hand
+
+    hand = [None, None, None, None, None]
+    dealer = [None, None, None, None, None]
+
+    in_game = False
+    player_stuck = False
+    player_total = 0
+    dealer_total = 0
+    player_bust = False
+    player_won = False
+    dealer_bust = False
+    dealer_won = False
+    player_score = 0
+    dealer_score = 0
+    player_stake = 5
+    draw = False
+    hand_over = False
+    first_hand = True
 
 def deal():
 
     #only deal if not already in a game and player has not stuck
     global in_game
     global player_stuck
+    global player_score
+    global dealer_score
+    global first_hand
 
-    if in_game != True and player_stuck != True:	
+    if not in_game and not player_stuck:
+        reset_game()	
         #generate a random number to select next card
         next_card = random.randrange(0, len(current_deck))
         #first card for player
-        card_image = current_deck[next_card]
-        image = pygame.image.load(card_image[1])
+        curr_card = current_deck[next_card]
+        image = pygame.image.load(curr_card[1])
         image = pygame.transform.scale(image, (100, 150))
         hand[0] = image
         current_deck.pop(next_card)
+        player_score += curr_card[0]
         #first card for dealer
-        card_image = current_deck[next_card]
-        image = pygame.image.load(card_image[1])
+        curr_card = current_deck[next_card]
+        image = pygame.image.load(curr_card[1])
         image = pygame.transform.scale(image, (100, 150))
         dealer[0] = image
         current_deck.pop(next_card)
+        dealer_score += curr_card[0]
         #second card for player
         next_card = random.randrange(0, len(current_deck))
-        card_image = current_deck[next_card]
-        image = pygame.image.load(card_image[1])
+        curr_card = current_deck[next_card]
+        image = pygame.image.load(curr_card[1])
         image = pygame.transform.scale(image, (100, 150))
         hand[1] = image
         current_deck.pop(next_card)
+        player_score += curr_card[0]
         in_game = True
-        print(len(current_deck))
 
 def twist():
 
     #only twist if in a game
     global in_game
     global player_stuck
+    global player_score
+    global player_bust
+    global player_funds
+    global hand_over
 
-    if in_game == True and player_stuck != True:
+    if in_game and not player_stuck:
         i=0
         while i < 5:
             if hand[i] == None:
                 next_card = random.randrange(0, len(current_deck))
-                card_image = current_deck[next_card]
-                image = pygame.image.load(card_image[1])
+                curr_card = current_deck[next_card]
+                image = pygame.image.load(curr_card[1])
                 image = pygame.transform.scale(image, (100, 150))
                 hand[i] = image
                 current_deck.pop(next_card)
+                player_score += curr_card[0]
                 break
             i+=1	
-        print(len(current_deck))
+
+        if player_score > 21:
+            player_bust = True
+            player_funds -= player_stake
+            hand_over = True
+            in_game = False
+            player_stuck = False
 
 def stick():
 
     #only stick if in a game
     global in_game
     global player_stuck
+    global dealer_score
+    global dealer_bust
+    global player_funds
+    global draw
+    global player_won
+    global dealer_won
+    global hand_over
 
-    if in_game == True:
+    if in_game and not hand_over:
         player_stuck = True
         i=0
         while i < 5:
             if dealer[i] == None:
                 next_card = random.randrange(0, len(current_deck))
-                card_image = current_deck[next_card]
-                image = pygame.image.load(card_image[1])
+                curr_card = current_deck[next_card]
+                image = pygame.image.load(curr_card[1])
                 image = pygame.transform.scale(image, (100, 150))
                 dealer[i] = image
                 current_deck.pop(next_card)
-                break
-            i+=1	
-        print(len(current_deck))
-        dealerBust()
-        playerBust()
+                dealer_score += curr_card[0]
+                if dealer_score >= 17:
+                    break
+            i+=1
+        if dealer_score > 21:
+            dealer_bust = True
+            player_funds += player_stake
+        elif dealer_score == player_score:
+            draw = True
+        elif dealer_score > player_score:
+            dealer_won = True
+            player_funds -= player_stake
+        else:
+            player_won = True
+            player_funds += player_stake
+
+        hand_over = True
+        in_game = False
+        player_stuck = False
+
+
 
 def text_objects(text, font):
     textSurface = font.render(text, True, black)
     return textSurface, textSurface.get_rect()
  
-def message_display(text):
-    largeText = pygame.font.Font('freesansbold.ttf',115)
-    TextSurf, TextRect = text_objects(text, largeText)
-    TextRect.center = ((display_width/2),(display_height/2))
+def message_display(x,y,text,textSize):
+    messageText = pygame.font.Font('freesansbold.ttf',textSize)
+    TextSurf, TextRect = text_objects(text, messageText)
+    TextRect.center = (x,y)
     gameDisplay.blit(TextSurf, TextRect)
- 
-    pygame.display.update()
- 
-    game_loop()
-    
+
 def button(msg,x,y,w,h,ic,ac,action=None):
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
-    #print(click)
     if x+w > mouse[0] > x and y+h > mouse[1] > y:
         pygame.draw.rect(gameDisplay, ac,(x,y,w,h))
 
         if click[0] == 1 and action != None:
-            #print(action)
             action()    
             pygame.event.wait(pygame.MOUSEBUTTONUP)    
     else:
         pygame.draw.rect(gameDisplay, ic,(x,y,w,h))
         
-    smallText = pygame.font.SysFont("freesansbold.ttf",20)
-    textSurf, textRect = text_objects(msg, smallText)
-    textRect.center = ( (x+(w/2)), (y+(h/2)) )
-    gameDisplay.blit(textSurf, textRect)
+    message_display((x+(w/2)), (y+(h/2)),msg,15)
  
 def playerBust():
     global player_bust
 
-    mediumText = pygame.font.SysFont("freesansbold.ttf",70)
-    textSurf, textRect = text_objects("You bust!", mediumText)
-    textRect.center = (600,480)
-    gameDisplay.blit(textSurf, textRect)
+    message_display(600,480,"You bust!",70)
     player_bust = True
 
 def dealerBust():
     global dealer_bust
     
-    mediumText = pygame.font.SysFont("freesansbold.ttf",70)
-    textSurf, textRect = text_objects("Dealer bust!", mediumText)
-    textRect.center = (600,50)
-    gameDisplay.blit(textSurf, textRect)
+    message_display(600,50,"Dealer bust!",70)
     dealer_bust = True
 
 def playerWon():
     global player_won
 
-    mediumText = pygame.font.SysFont("freesansbold.ttf",70)
-    textSurf, textRect = text_objects("You Won!", mediumText)
-    textRect.center = (600,480)
-    gameDisplay.blit(textSurf, textRect)
+    message_display(600,480,"You won!",70)
     player_won = True
 
 def dealerWon():
     global dealer_won
     
-    mediumText = pygame.font.SysFont("freesansbold.ttf",70)
-    textSurf, textRect = text_objects("Dealer Won!", mediumText)
-    textRect.center = (600,50)
-    gameDisplay.blit(textSurf, textRect)
+    message_display(600,50,"Dealer won!",70)
     dealer_won = True
+
+def game_drawn():
+    global draw
+
+    message_display(600,480,"You Drew!",70)
+    draw = True
 
 def quitgame ():
     pygame.quit()
@@ -197,36 +269,47 @@ def quitgame ():
 def game_loop():
 
     gameExit = False
+    global player_bust
+    global dealer_bust
+    global player_won
+    global dealer_won
+    global draw
  
     while not gameExit:
         for event in pygame.event.get():
-            #print(event)
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
 
         gameDisplay.fill(bg_colour)
-        largeText = pygame.font.Font('freesansbold.ttf',115)
-        TextSurf, TextRect = text_objects("Pontoon!", largeText)
-        TextRect.center = ((display_width/2),(display_height/2))
-        gameDisplay.blit(TextSurf, TextRect)
 
-        mediumText = pygame.font.Font('freesansbold.ttf',70)
-        TextSurf, TextRect = text_objects("Dealer", mediumText)
-        TextRect.center = (180,200)
-        gameDisplay.blit(TextSurf, TextRect)        
-
-        TextSurf, TextRect = text_objects("You", mediumText)
-        TextRect.center = (220,600)
-        gameDisplay.blit(TextSurf, TextRect)
+        message_display((display_width/2),(display_height/2),"Pontoon!",115)
+        message_display(180,200,"Dealer",70)
+        message_display(220,600,"You",70)
+        message_display(1000,700,"Stake: £" + str(player_stake),20)
+        message_display(1010,730,"Funds: £" + str(player_funds),20)
 
         button("Deal",430,750,50,25,green,bright_green,deal)
         button("Twist",530,750,50,25,green,bright_green,twist) 
         button("Stick",630,750,50,25,green,bright_green,stick)
         button("Quit",730,750,50,25,green,bright_green,quitgame)
 
-        playerWon()
-        dealerBust()
+        if dealer_bust:
+            playerWon()
+            dealerBust()
+
+        if player_bust:
+            playerBust()
+            dealerWon()
+
+        if player_won:
+            playerWon()
+
+        if dealer_won:
+            dealerWon()
+
+        if draw:
+            game_drawn()
 
         index = 0
         card_x = [330, 440, 550, 660, 770]
